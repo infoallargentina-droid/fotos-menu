@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Asignar Fotos — Menú Bodegón NKT</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#1A1A1A}
+.header{background:#1A1A1A;padding:16px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.header-logo{background:#FF4D00;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:13px;flex-shrink:0}
+.header h1{font-size:15px;font-weight:700;color:#fff}
+.header p{font-size:10px;color:rgba(255,255,255,0.4)}
+.progress{background:#FF4D00;border-radius:20px;padding:6px 14px;margin-left:auto;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.content{max-width:860px;margin:0 auto;padding:16px}
+.section-label{font-size:10px;font-weight:700;color:#FF4D00;letter-spacing:1px;text-transform:uppercase;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid #FF4D00}
+.prow{background:#fff;border-radius:12px;border:1px solid #eee;margin-bottom:8px;display:flex;align-items:center;overflow:hidden}
+.prow-img{width:70px;height:70px;flex-shrink:0;margin:8px;border-radius:8px;object-fit:cover;background:#f5f5f5;border:2px dashed #eee;display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;overflow:hidden}
+.prow-img img{width:100%;height:100%;object-fit:cover;border-radius:6px;display:none}
+.prow-img img.loaded{display:block}
+.prow-check{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(45,106,45,0.7);display:none;align-items:center;justify-content:center;color:#fff;font-size:20px;border-radius:6px}
+.prow-info{flex:1;padding:10px 8px;min-width:0}
+.prow-nombre{font-size:13px;font-weight:700;color:#1A1A1A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow-cat{font-size:9px;color:#FF4D00;font-weight:700;text-transform:uppercase;margin-top:2px}
+.prow-desc{font-size:10px;color:#888;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow-btn{flex-shrink:0;margin:8px;padding:9px 14px;background:#1A1A1A;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.prow-btn:hover{background:#FF4D00}
+
+/* MODAL */
+#modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;padding:12px}
+#modal-bg.open{display:flex}
+#modal{background:#fff;border-radius:18px;width:100%;max-width:680px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.mhead{padding:14px 18px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px}
+.mhead h2{font-size:15px;font-weight:700;flex:1}
+.mhead .mclose{background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1}
+.mprod{padding:8px 18px;font-size:12px;color:#888;background:#f9f9f9;border-bottom:1px solid #eee}
+.msearch{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid #f0f0f0}
+.msearch input{flex:1;padding:10px 14px;font-size:13px;border-radius:10px;border:1.5px solid #eee;outline:none}
+.msearch input:focus{border-color:#FF4D00}
+.msearch button{padding:10px 18px;background:#FF4D00;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
+#mgrid{padding:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;overflow-y:auto;flex:1}
+.mimg{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:pointer;border:3px solid transparent;transition:.15s}
+.mimg:hover{border-color:#FF4D00}
+.mimg.sel{border-color:#FF4D00;box-shadow:0 0 0 3px rgba(255,77,0,0.25)}
+.mfoot{padding:12px 18px;border-top:1px solid #eee;display:flex;gap:8px;align-items:center}
+.mfoot-url{flex:1;padding:9px 12px;font-size:12px;border-radius:8px;border:1.5px solid #eee;outline:none}
+.mfoot-url:focus{border-color:#FF4D00}
+#mbtn{padding:10px 20px;background:#FF4D00;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
+#mbtn:disabled{opacity:.4;cursor:default}
+
+.msg{text-align:center;padding:30px;color:#888;font-size:13px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1A1A;color:#fff;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:.3s}
+#toast.show{opacity:1}
+.fab{position:fixed;bottom:20px;right:20px;padding:14px 20px;background:#2D6A2D;color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.25);z-index:50}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-logo">ALL</div>
+  <div>
+    <h1>Asignar Fotos al Menú</h1>
+    <p>Bodegón NKT — elegí una foto para cada producto</p>
+  </div>
+  <div class="progress" id="progreso">0 / 0</div>
+</div>
+
+<div class="content">
+  <div id="wrap"><div class="msg">⏳ Cargando productos...</div></div>
+</div>
+
+<div id="modal-bg" onclick="if(event.target===this)cerrar()">
+  <div id="modal">
+    <div class="mhead">
+      <h2>🔍 Elegí una foto</h2>
+      <button class="mclose" onclick="cerrar()">✕</button>
+    </div>
+    <div class="mprod" id="mprod-label">Producto: –</div>
+    <div class="msearch">
+      <input type="text" id="msearch-input" placeholder="ej: rabas fritas, pizza margarita..." onkeydown="if(event.key==='Enter')buscar()"/>
+      <button onclick="buscar()">Buscar</button>
+    </div>
+    <div id="mgrid"><div class="msg">Ingresá un término y hacé clic en Buscar</div></div>
+    <div class="mfoot">
+      <input type="text" class="mfoot-url" id="murl" placeholder="O pegá una URL de imagen directa..." oninput="onUrlInput()"/>
+      <button id="mbtn" onclick="confirmar()" disabled>✓ Usar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<button class="fab" onclick="guardarTodo()">💾 Guardar todo</button>
+
+<script>
+const SB_URL='https://rkinieckmmlvldnccbzm.supabase.co'
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJraW5pZWNrbW1sdmxkbmNjYnptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNDM1NTQsImV4cCI6MjA5NTgxOTU1NH0.Mb82xSMu5KSwgju-rUEh-BBWNVLmJ3Fso5EZy4QeOvs'
+const RESTO_ID='4d4f47a2-cd71-4d4f-aff1-7d647ad27f4f'
+const {createClient}=supabase
+const sb=createClient(SB_URL,SB_KEY)
+
+// Términos de búsqueda sugeridos
+const HINT={
+  'Rabas':'calamari rings fried','Rabas media porcion':'calamari fried',
+  'Mejillones':'mussels wine sauce','Langostinos':'prawns fried panko',
+  'Gambas al ajillo':'shrimp garlic butter','Brocheta de langostinos':'shrimp skewer grilled',
+  'Burrata capresse (250 gr)':'burrata tomato','Provoleta campera':'provolone grilled cheese',
+  'Provoleta NKT':'provolone grilled','Aros de cebolla':'onion rings crispy',
+  'Bastones de muzzarella':'mozzarella sticks','Bastones de salmón':'salmon sticks',
+  'Bombas de papa':'potato croquettes','Crocantes de pollo':'chicken crispy',
+  'Croquetas de verdura':'vegetable croquettes','Cornalitos fritos':'small fried fish',
+  'Albóndigas de cerdo':'pork meatballs','Albóndigas de merluza y langostinos':'fish meatballs',
+  'Omelette XL':'omelette mushrooms','Sushi "Kusama"':'sushi rolls',
+  'Picada de fiambres':'charcuterie board meats','Picada de mariscos':'seafood platter',
+  'Muzzarella':'pizza mozzarella classic','Napolitana':'pizza napolitana tomato',
+  'Capresse':'pizza caprese','Crudo y rucula':'pizza prosciutto arugula',
+  'Del bosque':'pizza mushrooms','Del mar':'pizza seafood',
+  'Burrata y pesto':'pizza burrata pesto','Tres quesos':'pizza three cheese',
+  'Fugazzeta':'pizza onion','Anchoas':'pizza anchovies',
+  'Mortadela':'pizza mortadella','Pepperoni':'pizza pepperoni',
+  'Verduras':'pizza vegetables grilled','Especial':'pizza ham peppers',
+  'Langostinos al ajillo':'pizza shrimp garlic','Super roquefort':'pizza blue cheese walnut',
+  'Panceta y huevo':'pizza bacon egg','Boconccinos':'pizza fresh mozzarella',
+  'Baguette de mortadela':'mortadella sandwich baguette','Baguette de pastrón':'pastrami baguette',
+  'Ciabatta de rabas':'ciabatta calamari','Crudo':'prosciutto sandwich',
+  'Desmechado de carne':'pulled beef sandwich','Desmechado de cerdo':'pulled pork sandwich',
+  'Desmechado de pollo':'pulled chicken sandwich','Gravlax de salmón':'gravlax salmon bagel',
+  'Medallón de carne':'beef burger classic','Medallón de carne ahumado':'smoked burger',
+  'Medallón de carne crispy':'crispy mushroom burger','Medallón de carne NKT':'double beef burger',
+  'Vegetariano':'vegetarian sandwich','Papas fritas':'french fries golden',
+  'Papas NKT':'loaded fries cheese bacon','Papas de mar':'seafood fries',
+  'Papas ibéricas':'fries ham caramelized onion','Papas picantes':'spicy fries sauce',
+  'Papas roquefort':'fries blue cheese','Ensalada con langostinos':'shrimp salad greens',
+  'Ensalada NKT':'prosciutto salad','Ensalada serrana':'smoked salmon salad',
+  'Ensalada de vegetales asados':'roasted vegetables salad','Abadejo de autor':'fish fillet gourmet',
+  'Bife de chorizo':'grilled beef steak sirloin','Milanesa de lenguado':'breaded flounder fillet',
+  'Milanesa de pollo':'breaded chicken schnitzel','Milanesa de ternera':'veal schnitzel',
+  'Salmón':'salmon fillet restaurant','Trucha al eneldo':'trout dill baked',
+  'Limonada':'lemonade fresh glass','Limonada de frutos rojos':'red berry lemonade',
+  'Naranjada':'fresh orange juice','Pomelada':'grapefruit juice',
+  'Agua mineral':'mineral water glass','Agua con gas':'sparkling water glass',
+  'Agua saborizada':'flavored water colorful','Gaseosas':'soda cola glass ice',
+  'Tiramisú':'tiramisu dessert classic','Balcarce':'cream sponge cake',
+  'Cheesecake frutos rojos':'cheesecake strawberry','Selva negra':'black forest cake',
+  'Alfajor artesanal':'alfajor dulce de leche','Cubanitos rellenos chico':'wafer roll cream',
+  'Cubanitos rellenos grande':'wafer roll cream large',
+}
+
+// Términos para cervezas/vinos/adicionales
+const HINT_CAT={
+  'CERVEZAS':'cold beer glass amber','VINOS':'wine glass restaurant',
+  'ADICIONALES':'condiments sauce bowl',
+}
+
+var productos=[], pendientes={}, productoActual=null, urlSel=null
+
+async function cargar(){
+  var r=await sb.from('productos').select('*').eq('restaurante_id',RESTO_ID).order('categoria').order('nombre')
+  if(r.error){document.getElementById('wrap').innerHTML='<div class="msg">Error: '+r.error.message+'</div>';return}
+  productos=r.data||[]
+  renderizar()
+}
+
+function renderizar(){
+  var con=productos.filter(function(p){return p.imagen_url||pendientes[p.id]}).length
+  document.getElementById('progreso').textContent=con+' / '+productos.length
+  var cats={}, wrap=document.getElementById('wrap')
+  productos.forEach(function(p){var c=p.categoria||'Sin categoría';if(!cats[c])cats[c]=[];cats[c].push(p)})
+  var html=''
+  Object.keys(cats).forEach(function(cat){
+    html+='<div class="section-label">'+cat+'</div>'
+    cats[cat].forEach(function(p){
+      var url=pendientes[p.id]||p.imagen_url||''
+      html+='<div class="prow" id="prow-'+p.id+'">'
+      html+='<div class="prow-img" id="pimg-'+p.id+'">'
+      if(url){
+        html+='<img id="img-'+p.id+'" src="'+url+'" class="loaded" onerror="this.remove()" />'
+        html+='<div class="prow-check" style="display:flex">✓</div>'
+      } else {
+        html+='🍽'
+        html+='<div class="prow-check" id="chk-'+p.id+'"></div>'
+      }
+      html+='</div>'
+      html+='<div class="prow-info">'
+      html+='<div class="prow-nombre">'+p.nombre+'</div>'
+      html+='<div class="prow-cat">'+cat+'</div>'
+      if(p.descripcion) html+='<div class="prow-desc">'+p.descripcion+'</div>'
+      html+='</div>'
+      var hint=HINT[p.nombre]||HINT_CAT[cat]||p.nombre.toLowerCase()
+      html+='<button class="prow-btn" onclick="abrir(\''+p.id+'\',\''+p.nombre.replace(/'/g,"\\'")+'\',\''+hint.replace(/'/g,"\\'")+'\')" >🔍 Foto</button>'
+      html+='</div>'
+    })
+  })
+  wrap.innerHTML=html
+}
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+function abrir(id, nombre, hint){
+  productoActual=id; urlSel=null
+  document.getElementById('modal-bg').classList.add('open')
+  document.getElementById('mprod-label').textContent='🍽 '+nombre
+  document.getElementById('msearch-input').value=hint
+  document.getElementById('murl').value=''
+  document.getElementById('mbtn').disabled=true
+  document.querySelectorAll('.mimg').forEach(function(i){i.classList.remove('sel')})
+  buscar()
+}
+
+function cerrar(){document.getElementById('modal-bg').classList.remove('open');productoActual=null;urlSel=null}
+
+// Usa Pixabay API gratuita (no requiere CORS proxy)
+async function buscar(){
+  var q=document.getElementById('msearch-input').value.trim()
+  if(!q)return
+  var grid=document.getElementById('mgrid')
+  grid.innerHTML='<div class="msg" style="grid-column:span 4">🔍 Buscando...</div>'
+  urlSel=null; document.getElementById('mbtn').disabled=true
+
+  // Pixabay API key gratuita (pública para demos)
+  var key='45966135-3c4f22f8dd1cfdb39f5c89c1a'
+  var url='https://pixabay.com/api/?key='+key+'&q='+encodeURIComponent(q)+'&image_type=photo&per_page=16&safesearch=true&orientation=horizontal&category=food'
+  try{
+    var resp=await fetch(url)
+    var data=await resp.json()
+    if(!data.hits||!data.hits.length){
+      // fallback sin categoría
+      var url2='https://pixabay.com/api/?key='+key+'&q='+encodeURIComponent(q)+'&image_type=photo&per_page=16&safesearch=true'
+      var resp2=await fetch(url2)
+      data=await resp2.json()
+    }
+    if(!data.hits||!data.hits.length){grid.innerHTML='<div class="msg" style="grid-column:span 4">Sin resultados. Probá otro término.</div>';return}
+    grid.innerHTML=data.hits.map(function(h){
+      return '<img class="mimg" src="'+h.webformatURL+'" data-url="'+h.webformatURL+'" onclick="selImg(this)" loading="lazy"/>'
+    }).join('')
+  }catch(e){
+    grid.innerHTML='<div class="msg" style="grid-column:span 4">Error de red. Usá "Pegar URL" abajo.</div>'
+  }
+}
+
+function selImg(el){
+  document.querySelectorAll('.mimg').forEach(function(i){i.classList.remove('sel')})
+  el.classList.add('sel')
+  urlSel=el.dataset.url
+  document.getElementById('murl').value=''
+  document.getElementById('mbtn').disabled=false
+}
+
+function onUrlInput(){
+  var v=document.getElementById('murl').value.trim()
+  if(v){urlSel=v; document.getElementById('mbtn').disabled=false; document.querySelectorAll('.mimg').forEach(function(i){i.classList.remove('sel')})}
+  else{urlSel=null; document.getElementById('mbtn').disabled=true}
+}
+
+function confirmar(){
+  if(!urlSel||!productoActual)return
+  pendientes[productoActual]=urlSel
+  // Actualizar UI
+  var pimg=document.getElementById('pimg-'+productoActual)
+  if(pimg){
+    pimg.innerHTML='<img src="'+urlSel+'" class="loaded" onerror="this.remove()"/><div class="prow-check" style="display:flex">✓</div>'
+  }
+  var con=productos.filter(function(p){return p.imagen_url||pendientes[p.id]}).length
+  document.getElementById('progreso').textContent=con+' / '+productos.length
+  toast('✓ Foto asignada')
+  cerrar()
+}
+
+async function guardarTodo(){
+  var ids=Object.keys(pendientes)
+  if(!ids.length){toast('Sin cambios pendientes');return}
+  var ok=0,err=0
+  for(var i=0;i<ids.length;i++){
+    var r=await sb.from('productos').update({imagen_url:pendientes[ids[i]]}).eq('id',ids[i])
+    if(r.error)err++
+    else{var p=productos.find(function(x){return x.id===ids[i]});if(p)p.imagen_url=pendientes[ids[i]];delete pendientes[ids[i]];ok++}
+  }
+  toast(err?'⚠️ '+err+' errores, '+ok+' guardados':'✅ '+ok+' fotos guardadas en Supabase')
+}
+
+function toast(msg){
+  var t=document.getElementById('toast')
+  t.textContent=msg; t.classList.add('show')
+  setTimeout(function(){t.classList.remove('show')},2500)
+}
+
+cargar()
+</script>
+</body>
+</html>
