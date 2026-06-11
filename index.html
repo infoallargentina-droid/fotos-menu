@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -215,24 +216,19 @@ async function buscar(){
   grid.innerHTML='<div class="msg" style="grid-column:span 4">🔍 Buscando...</div>'
   urlSel=null; document.getElementById('mbtn').disabled=true
 
-  // Pixabay API key gratuita (pública para demos)
-  var key='45966135-3c4f22f8dd1cfdb39f5c89c1a'
-  var url='https://pixabay.com/api/?key='+key+'&q='+encodeURIComponent(q)+'&image_type=photo&per_page=16&safesearch=true&orientation=horizontal&category=food'
+  // Unsplash API
+  var ACCESS_KEY='Z_EOgLkFwbGmfBBisMBPMisMkJh9yxGm0JOOqFqSqMU'
+  var apiUrl='https://api.unsplash.com/search/photos?query='+encodeURIComponent(q)+'&per_page=16&orientation=squarish&client_id='+ACCESS_KEY
   try{
-    var resp=await fetch(url)
+    var resp=await fetch(apiUrl)
     var data=await resp.json()
-    if(!data.hits||!data.hits.length){
-      // fallback sin categoría
-      var url2='https://pixabay.com/api/?key='+key+'&q='+encodeURIComponent(q)+'&image_type=photo&per_page=16&safesearch=true'
-      var resp2=await fetch(url2)
-      data=await resp2.json()
-    }
-    if(!data.hits||!data.hits.length){grid.innerHTML='<div class="msg" style="grid-column:span 4">Sin resultados. Probá otro término.</div>';return}
-    grid.innerHTML=data.hits.map(function(h){
-      return '<img class="mimg" src="'+h.webformatURL+'" data-url="'+h.webformatURL+'" onclick="selImg(this)" loading="lazy"/>'
+    if(!data.results||!data.results.length){grid.innerHTML='<div class="msg" style="grid-column:span 4">Sin resultados. Probá otro término.</div>';return}
+    grid.innerHTML=data.results.map(function(h){
+      var url=h.urls.small
+      return '<img class="mimg" src="'+url+'" data-url="'+h.urls.regular+'" onclick="selImg(this)" loading="lazy"/>'
     }).join('')
   }catch(e){
-    grid.innerHTML='<div class="msg" style="grid-column:span 4">Error de red. Usá "Pegar URL" abajo.</div>'
+    grid.innerHTML='<div class="msg" style="grid-column:span 4">Error de red. Pegá una URL directamente abajo.</div>'
   }
 }
 
